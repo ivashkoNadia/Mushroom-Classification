@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Classification</title>
+	<link rel="stylesheet" href="styles.css">
+
+</head>
+<body>
+	<div class="side-border left"></div>
+    <div class="side-border right"></div>
+
+    <h1>Класифікація зображень грибів</h1>
+	<div class="warning-message">
+    Програма допомагає розпізнавати гриби, але не гарантує 100% точності. Через схожість видів можливі помилки. Перед вживанням обов'язково перевіряйте інформацію у надійних джерелах або з фахівцями.
+    </div>
+    <form id="uploadForm">
+        <label for="imageInput">Завантажити зображення:</label><br>
+        <input type="file" id="imageInput" name="file" accept="image/*" required><br><br>
+        <button type="submit">Розпізнати клас</button>
+    </form>
+
+    <h2>Результат</h2>
+    <div id="response">
+        <!-- The response from the server will appear here -->
+    </div>
+    <div id="imagePreview">
+        <!-- The uploaded image will appear here -->
+    </div>
+	<div id="details-link">
+    <!-- The link will appear here -->
+	</div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const responseDiv = document.getElementById('response');
+        const imagePreviewDiv = document.getElementById('imagePreview');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const fileInput = document.getElementById('imageInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                responseDiv.innerHTML = '<p style="color: red;">Please select a file.</p>';
+                return;
+            }
+
+            // Display the uploaded image
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreviewDiv.innerHTML = `<p>Ваше зображення:</p><img src="${e.target.result}" alt="Uploaded Image" style="max-width: 300px; max-height: 300px; margin-top: 10px;" />`;
+				
+            };
+            reader.readAsDataURL(file);
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+					 const data = await response.json();
+					responseDiv.innerHTML = `
+						<p>Клас: <strong>${data.class_name}</strong></p>
+						<p>Ймовірність належності до класу: <strong>${data.confidence}%</strong></p>`;
+
+					// Додати посилання
+					const detailsLinkDiv = document.getElementById('details-link');
+					detailsLinkDiv.innerHTML = `
+						<p>Детальніше читайте тут: 
+						<a href="${data.link}" target="_blank">${data.link}</a>
+						</p>`;
+				
+	
+                } else {
+                    const errorData = await response.json();
+                    responseDiv.innerHTML = `<p style="color: red;">Error: ${errorData.error}</p>`;
+                }
+            } catch (error) {
+                responseDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>
